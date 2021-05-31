@@ -25,6 +25,7 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/urfave/cli/v2"
 	"github.com/beito123/level"
 	"github.com/beito123/level/block"
 	"github.com/beito123/level/leveldb"
@@ -34,17 +35,50 @@ import (
 )
 
 func main() {
-	err := test()
+	app := &cli.App{
+		Name: "world2png",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "world",
+				Value: "./world",
+				Usage: "ワールドのパス",
+			},
+			&cli.IntFlag{
+				Name:  "scale",
+				Value: 32,
+				Usage: "生成するマップの大きさ",
+			},
+			&cli.IntFlag{
+				Name:  "minx",
+				Value: 0,
+				Usage: "生成する範囲の最小値（X座標）",
+			},
+			&cli.IntFlag{
+				Name:  "minz",
+				Value: 0,
+				Usage: "生成する範囲の最小値（Z座標）",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			err := test(c.String("world"), c.Int("scale"), c.Int("minx"), c.Int("minz"))
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	err := app.Run(os.Args)
 	if err != nil {
 		fmt.Printf("Error: %s", errors.WithStack(err))
 	}
 }
 
-func test() error {
+func test(_world string, _scale, _minx, _minz int) error {
 	resPath := "./resources"
 	texPath := "/vanilla/colors/"
 
-	lvl, err := leveldb.Load("./world")
+	lvl, err := leveldb.Load(_world)
 	if err != nil {
 		return err
 	}
@@ -74,12 +108,12 @@ func test() error {
 	// minx, maxx, minz, maxz := edges[0], edges[1], edges[2], edges[3]
 	// width, height := maxx-minx, maxz-minz
 
-	scale := 32
+	scale := _scale
 	line := 16 * scale
 	img := image.NewRGBA(image.Rect(0, 0, line, line))
 
-	bx := -16
-	by := -16
+	bx := _minx
+	by := _minz
 
 	type ImageData struct {
 		X     int
